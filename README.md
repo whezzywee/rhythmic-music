@@ -122,7 +122,7 @@ flutter run -d linux      # Linux
 | Version | Theme | What's included |
 |---------|-------|----------------|
 | **v0.1** | "It Lives" | ✅ Desktop builds working, dependencies updated, JNI removed, complete rebranding |
-| **v0.5** | "The Bridge" | Music Together over LAN, device discovery, desktop ↔ mobile sync |
+| **v0.5** | "The Bridge" | ✅ Music Together over LAN, device discovery, real-time playback sync |
 | **v1.0** | "Daily Driver" | System tray, media keys, keyboard shortcuts, audio normalization, polished UX |
 | **v2.0+** | "Future" | macOS support, multiple music sources, advanced Music Together features |
 
