@@ -10,6 +10,7 @@ import 'screens/Album/album_screen.dart';
 import 'screens/Playlist/playlist_screen.dart';
 import 'screens/Search/search_result_screen.dart';
 import 'screens/Search/search_screen.dart';
+import 'screens/music_together/music_together_screen.dart';
 
 class ScreenNavigationSetup {
   ScreenNavigationSetup._();
@@ -21,6 +22,7 @@ class ScreenNavigationSetup {
   static const artistScreen = '/artistScreen';
   static const albumScreen = '/albumScreen';
   static const playlistScreen = '/playlistScreen';
+  static const musicTogetherScreen = '/musicTogetherScreen';
 }
 
 class ScreenNavigation extends StatelessWidget {
@@ -71,7 +73,11 @@ class ScreenNavigation extends StatelessWidget {
                         key: Key(id),
                       ),
                   settings: settings);
-            
+
+            case ScreenNavigationSetup.musicTogetherScreen:
+              return GetPageRoute(
+                  page: () => const MusicTogetherScreen(), settings: settings);
+
             default:
               return null;
           }

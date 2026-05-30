@@ -655,6 +655,25 @@ class SettingsScreen extends StatelessWidget {
                     ),
                   ]),
               CustomExpansionTile(
+                  icon: Icons.group,
+                  title: "Music Together",
+                  children: [
+                    ListTile(
+                      contentPadding: const EdgeInsets.only(left: 5, right: 10),
+                      title: const Text("Music Together"),
+                      subtitle: Text(
+                        "Sync music over your local network",
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                      onTap: () {
+                        Get.toNamed(
+                          '/musicTogetherScreen',
+                          id: 1,
+                        );
+                      },
+                    ),
+                  ]),
+              CustomExpansionTile(
                 icon: Icons.info,
                 title: "appInfo".tr,
                 children: [
