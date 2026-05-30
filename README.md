@@ -104,7 +104,7 @@ Builds will be available for:
 ### Steps
 ```bash
 # Clone the repository
-git clone https://github.com/YOUR_USERNAME/rhythmic-music.git
+git clone https://github.com/whezzywee/rhythmic-music.git
 cd rhythmic-music
 
 # Get dependencies
@@ -121,7 +121,7 @@ flutter run -d linux      # Linux
 
 | Version | Theme | What's included |
 |---------|-------|----------------|
-| **v0.1** | "It Lives" | Desktop builds working, dependencies updated, critical bugs fixed, new branding |
+| **v0.1** | "It Lives" | ✅ Desktop builds working, dependencies updated, JNI removed, complete rebranding |
 | **v0.5** | "The Bridge" | Music Together over LAN, device discovery, desktop ↔ mobile sync |
 | **v1.0** | "Daily Driver" | System tray, media keys, keyboard shortcuts, audio normalization, polished UX |
 | **v2.0+** | "Future" | macOS support, multiple music sources, advanced Music Together features |
