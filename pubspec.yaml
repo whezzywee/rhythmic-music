@@ -1,5 +1,5 @@
 name: rhythmic_music
-description: A desktop music app built on Harmony Music. The desktop companion to OpenTune.
+description: A desktop music app, the desktop companion to OpenTune.
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: "none" # Remove this line if you wish to publish to pub.dev
@@ -50,7 +50,7 @@ dependencies:
   hive_flutter: ^1.1.0
   html: ^0.15.6
   ionicons: ^0.2.2
-  jni: ^0.14.0
+  # jni: ^0.14.0 — removed; Android-only, not needed for desktop
   just_audio: ^0.9.46
   just_audio_media_kit:
     git:
@@ -94,7 +94,7 @@ dev_dependencies:
   flutter_lints: ^4.0.0
   flutter_test:
     sdk: flutter
-  jnigen: ^0.14.0
+  # jnigen: ^0.14.0 — removed; Android-only, not needed for desktop
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
