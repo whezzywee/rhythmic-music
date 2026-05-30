@@ -1,7 +1,7 @@
 ---
-name: Feature request
-about: Suggest an idea for this project
-title: ''
+name: Feature Request
+about: Suggest a feature for Rhythmic Music
+title: '[Feature] '
 labels: enhancement
 assignees: ''
 

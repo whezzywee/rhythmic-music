@@ -1,93 +1,178 @@
 <div align="center">
 
-# ❗**This repository is no longer maintained.**
+# 🎵 Rhythmic Music
+
+**The desktop music app that plays in rhythm with your phone.**
+
+A free, open-source desktop music player for **Windows** and **Linux**.
+Built on the foundation of [Harmony Music](https://github.com/anandnet/Harmony-Music) by **anandnet**.
+Designed to work alongside [OpenTune](https://github.com/Arturo254/OpenTune) on mobile.
+
+[Download](#download) · [Features](#features) · [Music Together](#-music-together) · [Contributing](#contributing)
 
 </div>
 
-<img src="https://github.com/anandnet/Harmony-Music/blob/main/cover.png" width="1200" >
+---
 
-# Harmony Music
-A cross platform app for music streaming made with Flutter(Android, Windows, linux).
+## Why Rhythmic Music?
 
-# Features
-* Ability to play song from Ytube/Ytube Music.
-* Song cache while playing
-* Radio feature support
-* Background music
-* Playlist creation & bookmark support
-* Artist & Album bookmark support
-* Import song,Playlist,Album,Artist via sharing from Ytube/Ytube Music.
-* Streaming quality control
-* Song downloading support
-* Language support
-* Skip silence
-* Dynamic Theme
-* Flexibility to switch between Bottom & Side Nav bar
-* Equalizer support
-* Android Auto support
-* Synced & Plain Lyrics support
-* Sleep Timer
-* No Advertisment
-* No Login required
-* Piped playlist integration
+Android has incredible open-source music apps — [OpenTune](https://github.com/Arturo254/OpenTune), [OuterTune](https://github.com/DD3Boh/OuterTune), [RiMusic](https://github.com/fast4x/RiMusic) — but desktop has almost nothing.
 
+**Rhythmic Music** fills that gap. It's a desktop-first music player that streams from YouTube Music, with no ads, no accounts, and no tracking.
 
-# Download
-* Pleass choose one source for android apk. you won't be able to update from cross build apk source.
+And with **Music Together**, you can sync what you're listening to across your desktop and your phone — on the same local network — so your music flows with you.
 
-<a href="https://github.com/anandnet/Harmony-Music/releases/latest"><img src ="https://github.com/anandnet/Harmony-Music/blob/main/don_github.png" width = "250"></a> <a href= "https://f-droid.org/packages/com.anandnet.harmonymusic"><img src = "https://github.com/anandnet/Harmony-Music/blob/main/down_fdroid.png" width = '250'></a></a> 
+## Why This Fork Exists
 
-# Translation
-<a href="https://hosted.weblate.org/engage/harmony-music/">
-<img src="https://hosted.weblate.org/widget/harmony-music/project-translations/multi-auto.svg" alt="Translation status" />
-</a>
+[Harmony Music](https://github.com/anandnet/Harmony-Music) was created by **anandnet** — a beautifully designed, cross-platform music app built with Flutter. It was one of the few open-source music apps that truly cared about the desktop experience.
 
-You can also help us in translation, click status image or <a href="https://hosted.weblate.org/projects/harmony-music/project-translations/"> here </a> to go to Weblate.
+The original project reached its final release (v1.12.2) in December 2025, when anandnet announced the project's conclusion. We understand — open source is volunteer work, and every project has its season.
 
-# Troubleshoot
-* if you are facing Notification control issue or music playback stopped by system optimization, please enable ignore battery optimization option from settings
+But the desktop experience was too good to let go. So Rhythmic Music picks up where Harmony Music left off:
 
-# License
+- **Preserving** everything that made the original great
+- **Focusing** on desktop (Windows + Linux) — because Android is already covered
+- **Adding** Music Together for LAN-based sync with mobile apps like OpenTune
+- **Improving** with new features and polish over time
+
+We give full credit to **anandnet** and all original Harmony Music contributors. Their work is the foundation everything here is built on.
+
+> *"He made the rollercoaster and I sat in it. Now I want other people to experience what I experienced."*
+
+If anandnet ever wants to collaborate or take the project back — the door is always open.
+
+---
+
+## Features
+
+### Inherited from Harmony Music
+- 🎵 Stream music from YouTube / YouTube Music
+- 🔇 No ads, no login required
+- 📋 Playlist creation & management
+- 🔖 Bookmark songs, artists, albums
+- 📥 Song downloading & offline caching
+- 🎨 Dynamic themes (album art colors)
+- ⏭️ Skip silence
+- 🎚️ Equalizer
+- 🎤 Synced & plain lyrics
+- ⏰ Sleep timer
+- 🔊 Streaming quality control
+- 📐 Sidebar & bottom navigation toggle
+- 🖥️ Desktop-native UI (not a stretched mobile app)
+
+### New in Rhythmic Music
+- 🎧 **Music Together** — Sync listening sessions over LAN
+- 🖥️ Desktop-focused experience (Windows + Linux)
+- 🔧 Updated dependencies & bug fixes
+- ✨ More coming soon...
+
+---
+
+## 🎧 Music Together
+
+Listen to the same music at the same time with friends or across your own devices — as long as you're on the same local network.
+
+**How it works:**
+1. One device **hosts** a session
+2. Other devices **discover** it automatically on the network (via mDNS)
+3. Playback syncs in real-time — play, pause, seek, track changes
+
+**No internet server needed.** Everything stays on your local network. Private by design.
+
+Works between:
+- 🖥️ Rhythmic Music (desktop) ↔ 🖥️ Rhythmic Music (desktop)
+- 🖥️ Rhythmic Music (desktop) ↔ 📱 OpenTune (mobile) *(planned)*
+
+---
+
+## Download
+
+> 🚧 **Coming soon.** Rhythmic Music is currently in development.
+
+Builds will be available for:
+- **Windows** — `.exe` installer
+- **Linux** — AppImage, `.deb`, `.rpm`
+
+---
+
+## Building from Source
+
+### Prerequisites
+- [Flutter SDK](https://docs.flutter.dev/get-started/install) (stable channel)
+- For Linux: `mpv` package (`sudo apt install mpv` or equivalent)
+
+### Steps
+```bash
+# Clone the repository
+git clone https://github.com/YOUR_USERNAME/rhythmic-music.git
+cd rhythmic-music
+
+# Get dependencies
+flutter pub get
+
+# Run on desktop
+flutter run -d windows    # Windows
+flutter run -d linux      # Linux
 ```
-Harmony Music is a free software licensed under GPL v3.0 with following condition.
 
-- Copied/Modified version of this software can not be used for 'non-free' and profit purposes.
-- You can not publish copied/modified version of this app on closed source app repository
+---
+
+## Roadmap
+
+| Version | Theme | What's included |
+|---------|-------|----------------|
+| **v0.1** | "It Lives" | Desktop builds working, dependencies updated, critical bugs fixed, new branding |
+| **v0.5** | "The Bridge" | Music Together over LAN, device discovery, desktop ↔ mobile sync |
+| **v1.0** | "Daily Driver" | System tray, media keys, keyboard shortcuts, audio normalization, polished UX |
+| **v2.0+** | "Future" | macOS support, multiple music sources, advanced Music Together features |
+
+---
+
+## Contributing
+
+Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+Whether it's bug reports, feature ideas, code, translations, or documentation — every contribution matters.
+
+---
+
+## Credits & Acknowledgments
+
+This project wouldn't exist without the work of others:
+
+| Project | Creator | Contribution |
+|---------|---------|-------------|
+| [Harmony Music](https://github.com/anandnet/Harmony-Music) | **anandnet** | The foundation — the entire codebase this project is built on |
+| [OpenTune](https://github.com/Arturo254/OpenTune) | **Arturo254** | Inspiration for features, polish, and the Music Together concept |
+| [InnerTune](https://github.com/z-huang/InnerTune) | **z-huang** | The original that started the open-source YTM ecosystem |
+| [ViMusic](https://github.com/vfsfitvnm/ViMusic) | **vfsfitvnm** | UI inspiration for the original Harmony Music |
+| [LRCLIB](https://lrclib.net) | — | Synced lyrics provider |
+| [sigma67/ytmusicapi](https://github.com/sigma67/ytmusicapi) | **sigma67** | YouTube Music API reference |
+
+---
+
+## License
+
+```
+Rhythmic Music is free software licensed under GPL v3.0.
+
+Based on Harmony Music by anandnet, also licensed under GPL v3.0.
+
+- Copied/modified versions of this software cannot be used for non-free or profit purposes.
+- You cannot publish copied/modified versions of this app on closed-source app repositories
   like PlayStore/AppStore.
-
 ```
 
+## Disclaimer
 
-# Disclaimer
 ```
-This project has been created while learning & learning is the main intention.
-This project is not sponsored or affiliated with, funded, authorized, endorsed by any content provider.
-Any Song, content, trademark used in this app are intellectual property of their respective owners.
-Harmony music is not responsible for any infringement of copyright or other intellectual property rights that may result
-from the use of the songs and other content available through this app.
+This project is not sponsored, affiliated with, funded, authorized, or endorsed by any
+content provider. Any song, content, or trademark used in this app is the intellectual
+property of their respective owners.
 
-This Software is released "as-is", without any warranty, responsibility or liability.
-In no event shall the Author of this Software be liable for any special, consequential,
-incidental or indirect damages whatsoever (including, without limitation, any 
-other pecuniary loss) arising out of the use of inability to use this product, even if
-Author of this Sotware is aware of the possibility of such damages and known defect.
+Rhythmic Music is not responsible for any infringement of copyright or other intellectual
+property rights that may result from the use of songs and other content available through
+this app.
+
+This software is released "as-is", without any warranty, responsibility, or liability.
 ```
-
-# Learning References & Credits
-<a href = 'https://docs.flutter.dev/'>Flutter documentation</a> - a best guide to learn cross platform Ui/app developemnt<br/>
-<a href = 'https://suragch.medium.com/'>Suragch</a>'s Article related to Just audio & state management,architectural style<br/>
-<a href = 'https://github.com/sigma67'>sigma67</a>'s unofficial ytmusic api project<br/>
-App UI inspired by <a href = 'https://github.com/vfsfitvnm'>vfsfitvnm</a>'s ViMusic<br/>
-Synced lyrics provided by <a href = 'https://lrclib.net' >LRCLIB</a> <br/>
-<a href = 'https://piped.video' >Piped</a> for playlists.
-
-#### Major Packages used
-* just_audio: ^0.9.40  -  audio player for android
-* media_kit: ^1.1.9 - audio player for linux and windows
-* audio_service: ^0.18.15 - manage background music & platform audio services
-* get: ^4.6.6 -  package for high-performance state management, intelligent dependency injection, and route management
-* youtube_explode_dart: ^2.0.2 - Third party package to provide song url
-* hive: ^2.2.3 - offline db used 
-* hive_flutter: ^1.1.0
-
-
