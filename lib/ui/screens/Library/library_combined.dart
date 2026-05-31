@@ -90,7 +90,11 @@ class CombinedLibraryController extends GetxController
   @override
   void onInit() {
     super.onInit();
-    tabController = TabController(vsync: this, length: 4);
+    tabController = TabController(
+      vsync: this,
+      length: 4,
+      animationDuration: const Duration(milliseconds: 280),
+    );
   }
 
   @override

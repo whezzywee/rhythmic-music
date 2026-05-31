@@ -164,8 +164,8 @@ void sortArtist(
 Future<bool> newVersionCheck(String currentVersion) async {
   try {
     final tags = (await Dio()
-            .get("https://api.github.com/repos/anandnet/Harmony-Music/tags"))
-        .data;
+                .get("https://api.github.com/repos/whezzywee/rhythmic-music/tags"))
+            .data;
     final availableVersion = tags[0]['name'] as String;
     List currentVersion_ = currentVersion.substring(1).split(".");
     List availableVersion_ = availableVersion.substring(1).split(".");

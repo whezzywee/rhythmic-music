@@ -50,6 +50,7 @@ class PlayerController extends GetxController
   final progressBarStatus = ProgressBarState(
           buffered: Duration.zero, current: Duration.zero, total: Duration.zero)
       .obs;
+  DateTime _lastProgressBarUpdate = DateTime.fromMillisecondsSinceEpoch(0);
 
   final currentSongIndex = (0).obs;
   final isFirstSong = true;
@@ -211,6 +212,7 @@ class PlayerController extends GetxController
   void _listenForChangesInPosition() {
     AudioService.position.listen((position) {
       final oldState = progressBarStatus.value;
+      final now = DateTime.now();
       if (isSleepEndOfSongActive.isTrue) {
         timerDurationLeft.value = oldState.total.inSeconds - position.inSeconds;
         if (timerDurationLeft.value == 1) {
@@ -218,6 +220,13 @@ class PlayerController extends GetxController
           cancelSleepTimer();
         }
       }
+      if (position != Duration.zero &&
+          position.inSeconds == oldState.current.inSeconds &&
+          now.difference(_lastProgressBarUpdate) <
+              const Duration(milliseconds: 250)) {
+        return;
+      }
+      _lastProgressBarUpdate = now;
       progressBarStatus.update((val) {
         val!.current = position;
         val.buffered = oldState.buffered;
@@ -262,11 +271,6 @@ class PlayerController extends GetxController
         currentSong.value = mediaItem;
         currentSongIndex.value = currentQueue
             .indexWhere((element) => element.id == currentSong.value!.id);
-        await _checkFav();
-        await _addToRP(currentSong.value!);
-        if (isRadioModeOn && (currentSong.value!.id == currentQueue.last.id)) {
-          await _addRadioContinuation(radioInitiatorItem!);
-        }
         lyrics.value = {"synced": "", "plainLyrics": ""};
         showLyricsflag.value = false;
         if (isDesktopLyricsDialogOpen) {
@@ -277,8 +281,22 @@ class PlayerController extends GetxController
         if (Get.find<SettingsScreenController>().playerUi.value == 1) {
           gesturePlayerVisibleState.value = 2;
         }
+
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (currentSong.value?.id == mediaItem.id) {
+            unawaited(_updateSongLibrariesAfterFrame(mediaItem));
+          }
+        });
       }
     });
+  }
+
+  Future<void> _updateSongLibrariesAfterFrame(MediaItem mediaItem) async {
+    await _checkFav(mediaItem);
+    await _addToRP(mediaItem);
+    if (isRadioModeOn && mediaItem.id == currentQueue.last.id) {
+      await _addRadioContinuation(radioInitiatorItem!);
+    }
   }
 
   void _listenForPlaylistChange() {
@@ -660,9 +678,14 @@ class PlayerController extends GetxController
     volume.value = vol;
   }
 
-  Future<void> _checkFav() async {
-    isCurrentSongFav.value =
-        (await Hive.openBox("LIBFAV")).containsKey(currentSong.value!.id);
+  Future<void> _checkFav([MediaItem? song]) async {
+    final songToCheck = song ?? currentSong.value;
+    if (songToCheck == null) return;
+    final isFavorite =
+        (await Hive.openBox("LIBFAV")).containsKey(songToCheck.id);
+    if (currentSong.value?.id == songToCheck.id) {
+      isCurrentSongFav.value = isFavorite;
+    }
   }
 
   Future<void> toggleFavourite() async {

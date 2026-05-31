@@ -635,19 +635,6 @@ class MusicServices extends getx.GetxService {
               nav(chip, ['navigationEndpoint', 'searchEndpoint', 'params']);
         }
       }
-
-      // now Featured playlists and community playlists are not coming in top results
-      // so adding them in tab if not present
-      if ((searchResults['searchEndpoint'])
-              .containsKey("Community playlists") &&
-          !searchResults.containsKey("Community playlists")) {
-        searchResults["Community playlists"] = [];
-      }
-
-      if ((searchResults['searchEndpoint']).containsKey("Featured playlists") &&
-          !searchResults.containsKey("Featured playlists")) {
-        searchResults["Featured playlists"] = [];
-      }
     }
 
     /// End Search Chips
@@ -671,7 +658,7 @@ class MusicServices extends getx.GetxService {
         if (filter == null) {
           for (var item in mixedItems) {
             final itemType = item.runtimeType == MediaItem
-                ? (item.artist.split(",")[0]) + "s"
+                ? "Songs"
                 : "${item.runtimeType}s";
             if (searchResults.containsKey(itemType) &&
                 (searchResults[itemType]).length < 3) {
@@ -689,6 +676,23 @@ class MusicServices extends getx.GetxService {
               category);
         }
         type = typeFilter?.substring(0, typeFilter.length - 1).toLowerCase();
+      } else if (filter == null && res['itemSectionRenderer'] != null) {
+        final mixedItems = parseSearchResults(
+            res['itemSectionRenderer']['contents'],
+            ['artist', 'playlist', 'song', 'video', 'station'],
+            type,
+            "mixed");
+        for (var item in mixedItems) {
+          final itemType =
+              item.runtimeType == MediaItem ? "Songs" : "${item.runtimeType}s";
+          if (searchResults.containsKey(itemType) &&
+              (searchResults[itemType]).length < 3) {
+            (searchResults[itemType] as List).add(item);
+          } else if (!searchResults.containsKey(itemType)) {
+            searchResults[itemType] = [item];
+          }
+        }
+        continue;
       } else {
         continue;
       }

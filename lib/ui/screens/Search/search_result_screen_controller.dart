@@ -53,7 +53,9 @@ class SearchResultScreenController extends GetxController
       final tabName = railItems[value - 1];
       final itemCount = (tabName == 'Songs' || tabName == 'Videos') ? 25 : 10;
       final x = await musicServices.search(queryString.value,
-          filter: tabName.replaceAll(" ", "_").toLowerCase(), limit: itemCount, filterParams: resultContent['searchEndpoint'][tabName]);
+          filter: tabName.replaceAll(" ", "_").toLowerCase(),
+          limit: itemCount,
+          filterParams: resultContent['searchEndpoint'][tabName]);
       separatedResultContent[tabName] = x[tabName];
       additionalParamNext[tabName] = x['params'];
       isSeparatedResultContentFetced.value = true;
@@ -97,10 +99,16 @@ class SearchResultScreenController extends GetxController
     if (args != null) {
       queryString.value = args;
       resultContent.value = await musicServices.search(args);
-      final allKeys = resultContent.keys.where((element) => ([
+      final availableTabs = {
+        ...resultContent.keys,
+        if (resultContent['searchEndpoint'] is Map)
+          ...(resultContent['searchEndpoint'] as Map).keys,
+      };
+      final allKeys = availableTabs.where((element) => ([
             "Songs",
             "Videos",
             "Albums",
+            "Playlists",
             "Featured playlists",
             "Community playlists",
             "Artists"
@@ -126,8 +134,11 @@ class SearchResultScreenController extends GetxController
         }
 
         //tab controller for v2
-        tabController =
-            TabController(length: railItems.length + 1, vsync: this);
+        tabController = TabController(
+          length: railItems.length + 1,
+          vsync: this,
+          animationDuration: const Duration(milliseconds: 280),
+        );
 
         tabController?.animation?.addListener(() {
           int indexChange = tabController!.offset.round();

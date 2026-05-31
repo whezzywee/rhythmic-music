@@ -1,9 +1,9 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:isolate';
 import 'dart:math';
 
 import 'package:flutter/services.dart';
-
 
 import 'package:hive/hive.dart';
 import 'package:get/get.dart';
@@ -30,6 +30,11 @@ import '../ui/screens/Settings/settings_screen_controller.dart';
 import '../ui/screens/Library/library_controller.dart';
 // ignore: unused_import, implementation_imports, depend_on_referenced_packages
 import "package:media_kit/src/player/platform_player.dart" show MPVLogLevel;
+
+Future<Map<String, dynamic>> _getStreamInfoOnWorker(
+    String songId, RootIsolateToken? token) {
+  return Isolate.run(() => getStreamInfo(songId, token));
+}
 
 Future<AudioHandler> initAudioService() async {
   return await AudioService.init(
@@ -60,6 +65,9 @@ class MyAudioHandler extends BaseAudioHandler with GetxServiceMixin {
   bool loudnessNormalizationEnabled = false;
   // var networkErrorPause = false;
   bool isSongLoading = true;
+  int _playRequestId = 0;
+  final _streamInfoRequests = <String, Future<HMStreamingData>>{};
+  final _backgroundCacheJobs = <String>{};
 
   // list of shuffled queue songs ids
   List<String> shuffledQueue = [];
@@ -71,6 +79,8 @@ class MyAudioHandler extends BaseAudioHandler with GetxServiceMixin {
     if (GetPlatform.isWindows || GetPlatform.isLinux) {
       JustAudioMediaKit.title = 'Rhythmic Music';
       JustAudioMediaKit.protocolWhitelist = const ['http', 'https', 'file'];
+      // Increase demuxer cache from default 32MB to 128MB to reduce stuttering on song transitions
+      JustAudioMediaKit.bufferSize = 128 * 1024 * 1024;
     }
     _mediaLibrary = MediaLibrary();
     _player = AudioPlayer(
@@ -195,15 +205,43 @@ class MyAudioHandler extends BaseAudioHandler with GetxServiceMixin {
   }
 
   void _listenToPlaybackForNextSong() {
-    final playerDurationOffset = GetPlatform.isWindows
+    // Pre-warm the URL cache 3 seconds before the song ends.
+    // Actual playback trigger fires at the original offset (200/700ms).
+    const preloadOffsetMs = 3000;
+    final triggerOffsetMs = GetPlatform.isWindows
         ? 200
         : GetPlatform.isLinux
             ? 700
             : 0;
+    int? prefetchedForIndex;
+    int? triggeredForIndex;
     _player.positionStream.listen((value) async {
       if (_player.duration != null && _player.duration?.inSeconds != 0) {
-        if (value.inMilliseconds >=
-            (_player.duration!.inMilliseconds - playerDurationOffset)) {
+        final remaining =
+            _player.duration!.inMilliseconds - value.inMilliseconds;
+        if (isSongLoading) return;
+
+        // Phase 1: pre-warm URL cache (once, 3s before end).
+        if (remaining <= preloadOffsetMs &&
+            remaining > 0 &&
+            prefetchedForIndex != currentIndex) {
+          prefetchedForIndex = currentIndex as int?;
+          final nextIndex = _peekNextSongIndex();
+          if (nextIndex != currentIndex && nextIndex < queue.value.length) {
+            final nextSong = queue.value[nextIndex];
+            unawaited(checkNGetUrl(nextSong.id, generateNewUrl: false));
+          }
+        }
+
+        // Phase 2: actual transition trigger (once, near end).
+        if (remaining > triggerOffsetMs + 1500 &&
+            triggeredForIndex == currentIndex) {
+          triggeredForIndex = null;
+        }
+        if (remaining <= triggerOffsetMs &&
+            remaining > 0 &&
+            triggeredForIndex != currentIndex) {
+          triggeredForIndex = currentIndex as int?;
           await _triggerNext();
         }
       }
@@ -278,11 +316,21 @@ class MyAudioHandler extends BaseAudioHandler with GetxServiceMixin {
 
   AudioSource _createAudioSource(MediaItem mediaItem) {
     final url = mediaItem.extras!['url'] as String;
-    if (url.contains('/cache') ||
-        (Get.find<SettingsScreenController>().cacheSongs.isTrue &&
-            url.contains("http"))) {
+    if (!url.contains("http") && url.contains('/cache')) {
+      printINFO("Playing cached file using AudioSource.uri");
+      isPlayingUsingLockCachingSource = false;
+      return AudioSource.uri(
+        Uri.tryParse(url)!,
+        tag: mediaItem,
+      );
+    }
+
+    if (!GetPlatform.isDesktop &&
+        Get.find<SettingsScreenController>().cacheSongs.isTrue &&
+        url.contains("http")) {
       printINFO("Playing Using LockCaching");
       isPlayingUsingLockCachingSource = true;
+      // ignore: experimental_member_use
       return LockCachingAudioSource(
         Uri.parse(url),
         cacheFile: File("$_cacheDir/cachedSongs/${mediaItem.id}.mp3"),
@@ -323,10 +371,7 @@ class MyAudioHandler extends BaseAudioHandler with GetxServiceMixin {
 
   @override
   Future<void> play() async {
-    if (currentSongUrl == null ||
-        (GetPlatform.isDesktop &&
-            (_player.duration == null ||
-                _player.duration?.inMilliseconds == 0))) {
+    if (currentSongUrl == null) {
       await customAction("playByIndex", {'index': currentIndex});
       return;
     }
@@ -357,7 +402,9 @@ class MyAudioHandler extends BaseAudioHandler with GetxServiceMixin {
   }
 
   int _getNextSongIndex() {
+    if (queue.value.isEmpty) return 0;
     if (shuffleModeEnabled) {
+      if (shuffledQueue.isEmpty) return 0;
       if (currentShuffleIndex + 1 >= shuffledQueue.length) {
         shuffledQueue.shuffle();
         currentShuffleIndex = 0;
@@ -377,8 +424,29 @@ class MyAudioHandler extends BaseAudioHandler with GetxServiceMixin {
     }
   }
 
-  int _getPrevSongIndex() {
+  int _peekNextSongIndex() {
+    if (queue.value.isEmpty) return 0;
     if (shuffleModeEnabled) {
+      if (shuffledQueue.isEmpty) return 0;
+      final nextShuffleIndex = currentShuffleIndex + 1;
+      if (nextShuffleIndex >= shuffledQueue.length) return currentIndex;
+      return queue.value
+          .indexWhere((item) => item.id == shuffledQueue[nextShuffleIndex]);
+    }
+
+    if (queue.value.length > currentIndex + 1) {
+      return currentIndex + 1;
+    } else if (queueLoopModeEnabled) {
+      return 0;
+    } else {
+      return currentIndex;
+    }
+  }
+
+  int _getPrevSongIndex() {
+    if (queue.value.isEmpty) return 0;
+    if (shuffleModeEnabled) {
+      if (shuffledQueue.isEmpty) return 0;
       if (currentShuffleIndex - 1 < 0) {
         shuffledQueue.shuffle();
         currentShuffleIndex = shuffledQueue.length - 1;
@@ -400,9 +468,10 @@ class MyAudioHandler extends BaseAudioHandler with GetxServiceMixin {
   Future<void> skipToNext() async {
     final index = _getNextSongIndex();
     if (index != currentIndex) {
-      if (_player.position != Duration.zero) _player.seek(Duration.zero);
+      // Don't seek before playByIndex — it clears the source, causing MPV errors.
       await customAction("playByIndex", {'index': index});
     } else {
+      // At end of queue — restart current song.
       _player.seek(Duration.zero);
       _player.pause();
     }
@@ -411,10 +480,11 @@ class MyAudioHandler extends BaseAudioHandler with GetxServiceMixin {
   @override
   Future<void> skipToPrevious() async {
     if (_player.position.inMilliseconds > 5000) {
+      // Restart current song if past 5s.
       _player.seek(Duration.zero);
       return;
     }
-    _player.seek(Duration.zero);
+    // Go to previous song — don't seek before playByIndex.
     final index = _getPrevSongIndex();
     if (index != currentIndex) {
       await customAction("playByIndex", {'index': index});
@@ -444,7 +514,6 @@ class MyAudioHandler extends BaseAudioHandler with GetxServiceMixin {
   @override
   Future<void> customAction(String name, [Map<String, dynamic>? extras]) async {
     switch (name) {
-
       case 'dispose':
         await _player.dispose();
         super.stop();
@@ -452,24 +521,28 @@ class MyAudioHandler extends BaseAudioHandler with GetxServiceMixin {
 
       case 'playByIndex':
         final songIndex = extras!['index'];
-        currentIndex = songIndex;
         final isNewUrlReq = extras['newUrl'] ?? false;
-        final currentSong = queue.value[currentIndex];
-        final futureStreamInfo =
-            checkNGetUrl(currentSong.id, generateNewUrl: isNewUrlReq);
         final bool restoreSession = extras['restoreSession'] ?? false;
+        var currentSong = queue.value[songIndex];
+        final requestId = ++_playRequestId;
+
+        // Set index early so stale check works (compare after fetch).
+        currentIndex = songIndex;
         isSongLoading = true;
         playbackState.add(playbackState.value
             .copyWith(processingState: AudioProcessingState.loading));
-        if (_playList.children.isNotEmpty) {
-          await _playList.clear();
+
+        // Fetch stream URL while the old song still plays — the key optimization.
+        final streamInfo =
+            await checkNGetUrl(currentSong.id, generateNewUrl: isNewUrlReq);
+
+        // Stale check: if another playByIndex was called while we fetched,
+        // currentIndex will have changed — abort this one.
+        if (requestId != _playRequestId || currentIndex != songIndex) {
+          return;
         }
 
-        mediaItem.add(currentSong);
-        final streamInfo = await futureStreamInfo;
-        if (songIndex != currentIndex) {
-          return;
-        } else if (!streamInfo.playable) {
+        if (!streamInfo.playable) {
           currentSongUrl = null;
           isSongLoading = false;
           Get.find<PlayerController>().notifyPlayError(streamInfo.statusMSG);
@@ -479,12 +552,34 @@ class MyAudioHandler extends BaseAudioHandler with GetxServiceMixin {
               errorMessage: streamInfo.statusMSG));
           return;
         }
+
+        // URL ready. Keep playlist mutation serialized so desktop media_kit
+        // does not overlap clear/add/play work during uncached switches.
         currentSongUrl = currentSong.extras!['url'] = streamInfo.audio!.url;
+
+        if (_playList.children.isNotEmpty) {
+          await _playList.clear();
+        }
+        if (requestId != _playRequestId) return;
+
+        await _playList.add(_createAudioSource(currentSong));
+        if (requestId != _playRequestId) return;
+
+        // Set duration from stream metadata so UI has it even if MPV
+        // doesn't report one (some streams don't expose duration).
+        final audioDuration = streamInfo.audio!.duration;
+        if (audioDuration > 0) {
+          currentSong = currentSong.copyWith(
+              duration: Duration(milliseconds: audioDuration));
+        }
+
+        mediaItem.add(currentSong);
+        _scheduleBackgroundCache(currentSong, streamInfo);
+
         playbackState
             .add(playbackState.value.copyWith(queueIndex: currentIndex));
-        await _playList.add(_createAudioSource(currentSong));
-
         isSongLoading = false;
+
         if (loudnessNormalizationEnabled && GetPlatform.isAndroid) {
           _normalizeVolume(streamInfo.audio!.loudnessDb);
         }
@@ -493,16 +588,7 @@ class MyAudioHandler extends BaseAudioHandler with GetxServiceMixin {
           if (!GetPlatform.isDesktop) {
             final position = extras['position'];
             await _player.load();
-            await _player.seek(
-              Duration(
-                milliseconds: position,
-              ),
-            );
-            await _player.seek(
-              Duration(
-                milliseconds: position,
-              ),
-            );
+            await _player.seek(Duration(milliseconds: position));
           }
         } else {
           await _player.play();
@@ -543,13 +629,13 @@ class MyAudioHandler extends BaseAudioHandler with GetxServiceMixin {
 
       case 'setSourceNPlay':
         final currMed = (extras!['mediaItem'] as MediaItem);
-        final futureStreamInfo = checkNGetUrl(currMed.id);
+        final requestId = ++_playRequestId;
         isSongLoading = true;
         currentIndex = 0;
-        await _playList.clear();
-        mediaItem.add(currMed);
-        queue.add([currMed]);
-        final streamInfo = (await futureStreamInfo);
+
+        // Fetch stream URL while the old song still plays.
+        final streamInfo = await checkNGetUrl(currMed.id);
+
         if (!streamInfo.playable) {
           currentSongUrl = null;
           isSongLoading = false;
@@ -558,12 +644,22 @@ class MyAudioHandler extends BaseAudioHandler with GetxServiceMixin {
               .copyWith(processingState: AudioProcessingState.error));
           return;
         }
+
         currentSongUrl = currMed.extras!['url'] = streamInfo.audio!.url;
 
+        if (_playList.children.isNotEmpty) {
+          await _playList.clear();
+        }
+        if (requestId != _playRequestId) return;
+
         await _playList.add(_createAudioSource(currMed));
+        if (requestId != _playRequestId) return;
+
+        mediaItem.add(currMed);
+        _scheduleBackgroundCache(currMed, streamInfo);
+        queue.add([currMed]);
         isSongLoading = false;
 
-        // Normalize audio
         if (loudnessNormalizationEnabled && GetPlatform.isAndroid) {
           _normalizeVolume(streamInfo.audio!.loudnessDb);
         }
@@ -852,15 +948,92 @@ class MyAudioHandler extends BaseAudioHandler with GetxServiceMixin {
       }
 
       if (streamInfo == null) {
-        final token = RootIsolateToken.instance;
-        final streamInfoJson =
-            await Isolate.run(() => getStreamInfo(songId, token));
-        streamInfo = HMStreamingData.fromJson(streamInfoJson);
-        if (streamInfo.playable) songsUrlCacheBox.put(songId, streamInfoJson);
+        var streamInfoRequest = _streamInfoRequests[songId];
+        if (streamInfoRequest == null) {
+          streamInfoRequest =
+              _fetchStreamInfoAndCache(songId, songsUrlCacheBox);
+          _streamInfoRequests[songId] = streamInfoRequest;
+          unawaited(streamInfoRequest
+              .whenComplete(() => _streamInfoRequests.remove(songId)));
+        }
+        streamInfo = await streamInfoRequest;
       }
 
       streamInfo.setQualityIndex(qualityIndex as int);
       return streamInfo;
+    }
+  }
+
+  Future<HMStreamingData> _fetchStreamInfoAndCache(
+      String songId, Box songsUrlCacheBox) async {
+    final token = RootIsolateToken.instance;
+    final streamInfoJson = await _getStreamInfoOnWorker(songId, token);
+    final fetchedStreamInfo = HMStreamingData.fromJson(streamInfoJson);
+    if (fetchedStreamInfo.playable) {
+      await songsUrlCacheBox.put(songId, streamInfoJson);
+    }
+    return fetchedStreamInfo;
+  }
+
+  void _scheduleBackgroundCache(MediaItem song, HMStreamingData streamInfo) {
+    if (!GetPlatform.isDesktop ||
+        Get.find<SettingsScreenController>().cacheSongs.isFalse ||
+        streamInfo.audio == null ||
+        !streamInfo.audio!.url.contains("http") ||
+        Hive.box("SongsCache").containsKey(song.id) ||
+        _backgroundCacheJobs.contains(song.id)) {
+      return;
+    }
+
+    _backgroundCacheJobs.add(song.id);
+    unawaited(_cacheSongInBackground(song, streamInfo));
+  }
+
+  Future<void> _cacheSongInBackground(
+      MediaItem song, HMStreamingData streamInfo) async {
+    final cachePath = "$_cacheDir/cachedSongs/${song.id}.mp3";
+    final tempPath = "$cachePath.part";
+    final client = HttpClient();
+
+    try {
+      await Future<void>.delayed(const Duration(seconds: 8));
+      if (mediaItem.value?.id != song.id ||
+          Hive.box("SongsCache").containsKey(song.id)) {
+        return;
+      }
+
+      final request = await client.getUrl(Uri.parse(streamInfo.audio!.url));
+      final response = await request.close();
+      if (response.statusCode < 200 || response.statusCode >= 300) return;
+
+      final tempFile = File(tempPath);
+      if (await tempFile.exists()) await tempFile.delete();
+      await response.pipe(tempFile.openWrite());
+      if (await File(cachePath).exists()) await File(cachePath).delete();
+      await tempFile.rename(cachePath);
+
+      final jsonData = MediaItemBuilder.toJson(song);
+      jsonData['duration'] =
+          _player.duration?.inSeconds ?? streamInfo.audio!.duration ~/ 1000;
+      jsonData['streamInfo'] = [true, streamInfo.audio!.toJson()];
+      await Hive.box("SongsCache").put(song.id, jsonData);
+
+      if (Get.isRegistered<LibrarySongsController>()) {
+        final librarySongsController = Get.find<LibrarySongsController>();
+        if (!librarySongsController.isClosed) {
+          librarySongsController.librarySongsList.value =
+              librarySongsController.librarySongsList.toList() + [song];
+        }
+      }
+    } catch (e) {
+      printERROR(e);
+      final tempFile = File(tempPath);
+      if (await tempFile.exists()) {
+        await tempFile.delete();
+      }
+    } finally {
+      client.close(force: true);
+      _backgroundCacheJobs.remove(song.id);
     }
   }
 }
@@ -868,7 +1041,6 @@ class MyAudioHandler extends BaseAudioHandler with GetxServiceMixin {
 class UrlError extends Error {
   String message() => 'Unable to fetch url';
 }
-
 
 // for Android Auto
 class MediaLibrary {

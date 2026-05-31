@@ -455,13 +455,17 @@ Map<String, dynamic> parseWatchTrack(Map<String, dynamic> data) {
 }
 
 String? getTabBrowseId(Map<String, dynamic> watchNextRenderer, int tabId) {
-  if (!watchNextRenderer['tabs'][tabId]['tabRenderer']
-      .containsKey('unselectable')) {
-    return watchNextRenderer['tabs'][tabId]['tabRenderer']['endpoint']
-        ['browseEndpoint']['browseId'];
-  } else {
-    return null;
+  final tabs = watchNextRenderer['tabs'];
+  if (tabs == null || tabId >= tabs.length) return null;
+  final tab = tabs[tabId];
+  if (tab == null || tab['tabRenderer'] == null) return null;
+  if (!tab['tabRenderer'].containsKey('unselectable')) {
+    final endpoint = tab['tabRenderer']['endpoint'];
+    if (endpoint != null && endpoint['browseEndpoint'] != null) {
+      return endpoint['browseEndpoint']['browseId'];
+    }
   }
+  return null;
 }
 
 ///Parse playlist songs, Also used in Album Song parsing
@@ -500,11 +504,11 @@ List<dynamic> parsePlaylistItems(List<dynamic> results,
         'browseId'
       ]);
       videoId = creditId?.split("MPTC")[1];
-      
+
     }
 
     if(isAlbum){
-      // Contains track number and total tracks 
+      // Contains track number and total tracks
       trackDetails = data?["index"] != null
           ? "${nav(data, ['index', 'runs', 0, 'text'])}/${results.length}"
           : null;

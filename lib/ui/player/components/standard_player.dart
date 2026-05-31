@@ -1,6 +1,5 @@
 import 'dart:ui';
 
-
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -44,41 +43,45 @@ class StandardPlayer extends StatelessWidget {
 
         /// Stack child
         /// Blur effect on background
-        BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
-          child: Stack(
-            children: [
-              /// opacity effect on background
-              Positioned.fill(
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).primaryColor.withOpacity(0.8),
-                  ),
-                ),
-              ),
-
-              /// used to hide queue header when player is minimized
-              /// gradient to used here
-              Align(
-                alignment: Alignment.bottomCenter,
-                child: Container(
-                  height: 65 + Get.mediaQuery.padding.bottom + 120,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        Theme.of(context).primaryColor,
-                        Theme.of(context).primaryColor,
-                        Theme.of(context).primaryColor.withOpacity(0.4),
-                        Theme.of(context).primaryColor.withOpacity(0),
-                      ],
-                      begin: Alignment.bottomCenter,
-                      end: Alignment.topCenter,
-                      stops: const [0, 0.5, 0.8, 1],
+        ClipRect(
+          child: RepaintBoundary(
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 8.0, sigmaY: 8.0),
+              child: Stack(
+                children: [
+                  /// opacity effect on background
+                  Positioned.fill(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).primaryColor.withOpacity(0.8),
+                      ),
                     ),
                   ),
-                ),
+
+                  /// used to hide queue header when player is minimized
+                  /// gradient to used here
+                  Align(
+                    alignment: Alignment.bottomCenter,
+                    child: Container(
+                      height: 65 + Get.mediaQuery.padding.bottom + 120,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            Theme.of(context).primaryColor,
+                            Theme.of(context).primaryColor,
+                            Theme.of(context).primaryColor.withOpacity(0.4),
+                            Theme.of(context).primaryColor.withOpacity(0),
+                          ],
+                          begin: Alignment.bottomCenter,
+                          end: Alignment.topCenter,
+                          stops: const [0, 0.5, 0.8, 1],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
 
