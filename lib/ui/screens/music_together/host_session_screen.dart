@@ -160,21 +160,10 @@ class _PeerListCard extends StatelessWidget {
                 separatorBuilder: (_, __) => const Divider(height: 1),
                 itemBuilder: (context, index) {
                   final peer = peers[index];
-                  IconData deviceIcon;
-                  switch (peer.device) {
-                    case 'android':
-                      deviceIcon = Icons.phone_android;
-                      break;
-                    case 'linux':
-                      deviceIcon = Icons.computer;
-                      break;
-                    default:
-                      deviceIcon = Icons.laptop_windows;
-                  }
                   return ListTile(
-                    leading: Icon(deviceIcon),
+                    leading: Icon(peer.isHost ? Icons.star : Icons.person),
                     title: Text(peer.name),
-                    subtitle: Text(peer.device),
+                    subtitle: Text(peer.isPending ? 'Pending approval' : 'Connected'),
                     dense: true,
                   );
                 },

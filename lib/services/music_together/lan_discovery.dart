@@ -9,6 +9,7 @@ class DiscoveredSession {
   final String hostAddress;
   final int hostPort;
   final String sessionId;
+  final String sessionKey;
   final DateTime lastSeen;
 
   DiscoveredSession({
@@ -16,6 +17,7 @@ class DiscoveredSession {
     required this.hostAddress,
     required this.hostPort,
     required this.sessionId,
+    required this.sessionKey,
     DateTime? lastSeen,
   }) : lastSeen = lastSeen ?? DateTime.now();
 
@@ -98,6 +100,7 @@ class LanDiscovery {
         hostAddress: data['host_address'] as String,
         hostPort: data['host_port'] as int,
         sessionId: data['session_id'] as String,
+        sessionKey: data['session_key'] as String? ?? '',
         lastSeen: DateTime.now(),
       );
 
@@ -132,6 +135,7 @@ class LanDiscovery {
     required String sessionName,
     required int hostPort,
     required String sessionId,
+    String sessionKey = '',
   }) async {
     try {
       _broadcastSocket = await RawDatagramSocket.bind(
@@ -151,6 +155,7 @@ class LanDiscovery {
         'host_address': localAddr,
         'host_port': hostPort,
         'session_id': sessionId,
+        'session_key': sessionKey,
       });
 
       final packet = utf8.encode('$_magicPrefix$discoveryMessage');

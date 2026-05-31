@@ -75,29 +75,31 @@ class HomeScreen extends StatelessWidget {
               : const SizedBox.shrink(),
         ),
         body: Obx(
-          () => Row(
-            children: <Widget>[
-              // create a navigation rail
-              settingsScreenController.isBottomNavBarEnabled.isFalse
-                  ? const SideNavBar()
-                  : const SizedBox(
-                      width: 0,
-                    ),
-              //const VerticalDivider(thickness: 1, width: 2),
-              Expanded(
-                child: Obx(() => AnimatedScreenTransition(
-                    enabled: settingsScreenController
-                        .isTransitionAnimationDisabled.isFalse,
-                    resverse: homeScreenController.reverseAnimationtransiton,
-                    horizontalTransition:
-                        settingsScreenController.isBottomNavBarEnabled.isTrue,
-                    child: Center(
-                      key: ValueKey<int>(homeScreenController.tabIndex.value),
-                      child: const Body(),
-                    ))),
-              ),
-            ],
-          ),
+          () {
+            return Row(
+              children: <Widget>[
+                // create a navigation rail
+                settingsScreenController.isBottomNavBarEnabled.isFalse
+                    ? const SideNavBar()
+                    : const SizedBox(
+                        width: 0,
+                      ),
+                //const VerticalDivider(thickness: 1, width: 2),
+                Expanded(
+                  child: Obx(() => AnimatedScreenTransition(
+                      enabled: settingsScreenController
+                          .isTransitionAnimationDisabled.isFalse,
+                      resverse: homeScreenController.reverseAnimationtransiton,
+                      horizontalTransition:
+                          settingsScreenController.isBottomNavBarEnabled.isTrue,
+                      child: Center(
+                        key: ValueKey<int>(homeScreenController.tabIndex.value),
+                        child: const Body(),
+                      ))),
+                ),
+              ],
+            );
+          },
         ));
   }
 }

@@ -39,15 +39,18 @@ class ImageWidget extends StatelessWidget {
                 : artist != null
                     ? artist!.thumbnailUrl
                     : "";
-    // String cacheKey = song != null
-    //     ? "${song!.id}_song"
-    //     : playlist != null
-    //         ? "${playlist!.playlistId}_playlist"
-    //         : album != null
-    //             ? "${album!.browseId}_album"
-    //             : artist != null
-    //                 ? "${artist!.browseId}_artist"
-    //                 : "";
+    final cacheKey = song != null
+        ? "${song!.id}_song"
+        : playlist != null
+            ? "${playlist!.playlistId}_playlist"
+            : album != null
+                ? "${album!.browseId}_album"
+                : artist != null
+                    ? "${artist!.browseId}_artist"
+                    : imageUrl;
+    final memCacheSize = song != null
+        ? (isPlayerArtImage ? 420 : 140)
+        : (size * MediaQuery.devicePixelRatioOf(context)).round();
 
     /// only valid for offline songs
     final bool offlineAvailable =
@@ -72,11 +75,14 @@ class ImageWidget extends StatelessWidget {
           : CachedNetworkImage(
               height: size,
               width: size,
-              memCacheHeight: (song != null && !isPlayerArtImage) ? 140 : null,
-              //memCacheWidth: (song != null && !isPlayerArtImage)? 140 : null,
-              //cacheKey: cacheKey,
+              memCacheHeight: memCacheSize,
+              memCacheWidth: memCacheSize,
+              cacheKey: cacheKey,
+              fadeInDuration: Duration.zero,
+              fadeOutDuration: Duration.zero,
               imageUrl: imageUrl,
               fit: BoxFit.cover,
+              filterQuality: FilterQuality.low,
               errorWidget: (context, url, error) {
                 return Container(
                     padding: const EdgeInsets.all(10),

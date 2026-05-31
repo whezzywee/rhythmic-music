@@ -190,7 +190,7 @@ class AlbumScreen extends StatelessWidget {
                                         children: [
                                           // Bookmark button
                                           Obx(() => IconButton(
-                                            tooltip: albumController
+                                              tooltip: albumController
                                                       .isAddedToLibrary.isFalse
                                                   ? "addToLibrary".tr
                                                   : "removeFromLibrary".tr,
@@ -227,7 +227,7 @@ class AlbumScreen extends StatelessWidget {
                                                   : Icons.bookmark_added))),
                                           // Play button
                                           IconButton(
-                                            tooltip: "play".tr,
+                                              tooltip: "play".tr,
                                               onPressed: () {
                                                 playerController
                                                     .playPlayListSong(
@@ -254,7 +254,7 @@ class AlbumScreen extends StatelessWidget {
                                               )),
                                           // Enqueue button
                                           IconButton(
-                                            tooltip: "enqueueAlbumSongs".tr,
+                                              tooltip: "enqueueAlbumSongs".tr,
                                               onPressed: () {
                                                 Get.find<PlayerController>()
                                                     .enqueueSongList(
@@ -363,7 +363,7 @@ class AlbumScreen extends StatelessWidget {
                                           //           Icons.cloud_sync)),
 
                                           IconButton(
-                                            tooltip: "shareAlbum".tr,
+                                              tooltip: "shareAlbum".tr,
                                               visualDensity:
                                                   const VisualDensity(
                                                       vertical: -3),
@@ -484,10 +484,15 @@ class AlbumScreen extends StatelessWidget {
     return AnimatedBuilder(
       animation: albumController.animationController,
       builder: (context, child) {
-        return SizedBox(
-          height: albumController.heightAnimation.value,
-          child: Transform.scale(
-              scale: albumController.scaleAnimation.value, child: child),
+        return ClipRect(
+          child: SizedBox(
+            height: 90,
+            child: Transform.scale(
+              alignment: Alignment.topLeft,
+              scale: albumController.scaleAnimation.value,
+              child: child,
+            ),
+          ),
         );
       },
       child: Padding(

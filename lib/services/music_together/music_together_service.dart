@@ -5,25 +5,25 @@ import 'lan_discovery.dart';
 import 'session_host.dart';
 import 'session_client.dart';
 import 'sync_controller.dart';
+import 'together_messages.dart';
 
 class MusicTogetherService extends GetxController {
   final LanDiscovery lanDiscovery = LanDiscovery();
   final SyncController syncController = SyncController();
-  final SessionHost sessionHost = SessionHost();
+  late TogetherServer _sessionHost;
   final SessionClient sessionClient = SessionClient();
 
   final RxString sessionName = ''.obs;
   final RxString sessionId = ''.obs;
+  final RxString sessionKey = ''.obs;
+  final RxString hostParticipantId = ''.obs;
   final RxBool isHosting = false.obs;
   final RxBool isPeer = false.obs;
-  final RxList<ConnectedPeer> connectedPeers = <ConnectedPeer>[].obs;
-  final RxList<DiscoveredSession> discoveredSessions = <DiscoveredSession>[].obs;
+  final RxList<TogetherParticipant> connectedPeers =
+      <TogetherParticipant>[].obs;
+  final RxList<DiscoveredSession> discoveredSessions =
+      <DiscoveredSession>[].obs;
   final Rx<ClientState> clientState = ClientState.disconnected.obs;
-  final RxDouble currentPositionMs = 0.0.obs;
-  final RxDouble currentDurationMs = 0.0.obs;
-  final RxString currentTrackTitle = ''.obs;
-  final RxString currentTrackArtist = ''.obs;
-  final RxBool isPlaying = false.obs;
 
   @override
   void onInit() {
@@ -32,29 +32,35 @@ class MusicTogetherService extends GetxController {
       discoveredSessions.value = sessions;
     });
 
-    sessionHost.peerListStream.listen((peers) {
-      connectedPeers.value = peers;
-    });
-
     sessionClient.stateStream.listen((state) {
       clientState.value = state;
     });
   }
 
-  int get hostPort => sessionHost.port ?? 0;
+  int get hostPort => _sessionHost.port ?? 0;
 
   Future<void> startHosting({required String name}) async {
     sessionName.value = name;
     sessionId.value = _generateSessionId();
+    sessionKey.value = _generateSessionKey();
+    hostParticipantId.value = _generateSessionId();
+
+    _sessionHost = TogetherServer(
+      sessionId: sessionId.value,
+      sessionKey: sessionKey.value,
+      hostDisplayName: name,
+    );
 
     final port = 18765;
-    await sessionHost.start(port);
-    syncController.startHosting();
+    await _sessionHost.start(port);
+
+    syncController.startHosting(_sessionHost);
 
     await lanDiscovery.startAdvertising(
       sessionName: name,
       hostPort: port,
       sessionId: sessionId.value,
+      sessionKey: sessionKey.value,
     );
 
     isHosting.value = true;
@@ -62,8 +68,8 @@ class MusicTogetherService extends GetxController {
 
   Future<void> stopHosting() async {
     lanDiscovery.stopAdvertising();
-    await sessionHost.stop();
     syncController.stopHosting();
+    await _sessionHost.stop();
     isHosting.value = false;
     connectedPeers.clear();
   }
@@ -80,8 +86,9 @@ class MusicTogetherService extends GetxController {
     await sessionClient.connect(
       hostAddress: session.hostAddress,
       hostPort: session.hostPort,
-      peerName: 'Rhythmic Desktop',
-      device: 'windows',
+      sessionId: session.sessionId,
+      sessionKey: session.sessionKey,
+      displayName: 'Rhythmic Desktop',
     );
 
     syncController.startPeering();
@@ -106,5 +113,11 @@ class MusicTogetherService extends GetxController {
     final random = Random();
     const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
     return List.generate(8, (_) => chars[random.nextInt(chars.length)]).join();
+  }
+
+  String _generateSessionKey() {
+    final random = Random();
+    const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+    return List.generate(16, (_) => chars[random.nextInt(chars.length)]).join();
   }
 }

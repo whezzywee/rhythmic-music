@@ -93,7 +93,7 @@ BEGIN
             VALUE "FileDescription", "Rhythmic Music" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
             VALUE "InternalName", "rhythmic_music" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2025 Rhythmic Music. All rights reserved." "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2026 Rhythmic Music. All rights reserved."
             VALUE "OriginalFilename", "rhythmic_music.exe" "\0"
             VALUE "ProductName", "Rhythmic Music" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"

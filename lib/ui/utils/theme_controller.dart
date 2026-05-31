@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -15,6 +14,8 @@ class ThemeController extends GetxController {
   /// The method channel for setting the title bar color on Windows.
   final platform = const MethodChannel('win_titlebar_color');
   String? currentSongId;
+  String? _pendingSongId;
+  int _themeRequestId = 0;
   late Brightness systemBrightness;
 
   ThemeController() {
@@ -22,10 +23,10 @@ class ThemeController extends GetxController {
         WidgetsBinding.instance.platformDispatcher.platformBrightness;
 
     primaryColor.value =
-        Color(Hive.box('appPrefs').get("themePrimaryColor") ?? 4278199603);
+        Color(Hive.box('AppPrefs').get("themePrimaryColor") ?? 4278199603);
 
     changeThemeModeType(
-        ThemeType.values[Hive.box('appPrefs').get("themeModeType") ?? 0]);
+        ThemeType.values[Hive.box('AppPrefs').get("themeModeType") ?? 0]);
 
     _listenSystemBrightness();
 
@@ -37,7 +38,7 @@ class ThemeController extends GetxController {
     platformDispatcher.onPlatformBrightnessChanged = () {
       systemBrightness = platformDispatcher.platformBrightness;
       changeThemeModeType(
-          ThemeType.values[Hive.box('appPrefs').get("themeModeType")],
+          ThemeType.values[Hive.box('AppPrefs').get("themeModeType")],
           sysCall: true);
     };
   }
@@ -51,6 +52,9 @@ class ThemeController extends GetxController {
               : ThemeType.dark);
     } else {
       if (sysCall) return;
+      if (value == ThemeType.dynamic) {
+        primaryColor.value = _materialYouDynamicColor(primaryColor.value!);
+      }
       themedata.value = _createThemeData(
           value == ThemeType.dynamic
               ? _createMaterialColor(primaryColor.value!)
@@ -60,30 +64,44 @@ class ThemeController extends GetxController {
     setWindowsTitleBarColor(themedata.value!.scaffoldBackgroundColor);
   }
 
-  void setTheme(ImageProvider imageProvider, String songId) async {
-    if (songId == currentSongId) return;
-    PaletteGenerator generator = await PaletteGenerator.fromImageProvider(
-        ResizeImage(imageProvider, height: 200, width: 200));
-    //final colorList = generator.colors;
-    final paletteColor = generator.dominantColor ??
-        generator.darkMutedColor ??
-        generator.darkVibrantColor ??
-        generator.lightMutedColor ??
-        generator.lightVibrantColor;
-    primaryColor.value = paletteColor!.color;
-    textColor.value = paletteColor.bodyTextColor;
-    // printINFO(paletteColor.color.computeLuminance().toString());0.11 ref
-    if (paletteColor.color.computeLuminance() > 0.10) {
-      primaryColor.value = paletteColor.color.withLightness(0.10);
-      textColor.value = Colors.white54;
+  Future<void> setTheme(ImageProvider imageProvider, String songId) async {
+    if (songId == currentSongId || songId == _pendingSongId) return;
+
+    final requestId = ++_themeRequestId;
+    _pendingSongId = songId;
+    try {
+      PaletteGenerator generator = await PaletteGenerator.fromImageProvider(
+          ResizeImage(imageProvider, height: 200, width: 200));
+      if (requestId != _themeRequestId) return;
+
+      final paletteColor = generator.dominantColor ??
+          generator.darkMutedColor ??
+          generator.darkVibrantColor ??
+          generator.lightMutedColor ??
+          generator.lightVibrantColor;
+      if (paletteColor == null) return;
+
+      final newPrimaryColor = _materialYouDynamicColor(paletteColor.color);
+      const newTextColor = Colors.white70;
+
+      final primarySwatch = _createMaterialColor(newPrimaryColor);
+      final newThemeData = _createThemeData(primarySwatch, ThemeType.dynamic,
+          textColor: newTextColor,
+          titleColorSwatch: _createMaterialColor(newTextColor));
+
+      themedata.value = newThemeData;
+      primaryColor.value = newPrimaryColor;
+      textColor.value = newTextColor;
+      currentSongId = songId;
+      Hive.box('AppPrefs').put("themePrimaryColor", newPrimaryColor.toARGB32());
+      setWindowsTitleBarColor(newThemeData.scaffoldBackgroundColor);
+    } catch (e) {
+      printERROR("Failed to set dynamic theme: $e");
+    } finally {
+      if (requestId == _themeRequestId && _pendingSongId == songId) {
+        _pendingSongId = null;
+      }
     }
-    final primarySwatch = _createMaterialColor(primaryColor.value!);
-    themedata.value = _createThemeData(primarySwatch, ThemeType.dynamic,
-        textColor: textColor.value,
-        titleColorSwatch: _createMaterialColor(textColor.value));
-    currentSongId = songId;
-    Hive.box('appPrefs').put("themePrimaryColor", (primaryColor.value!).toARGB32());
-    setWindowsTitleBarColor(themedata.value!.scaffoldBackgroundColor);
   }
 
   ThemeData _createThemeData(MaterialColor? primarySwatch, ThemeType themeType,
@@ -102,23 +120,20 @@ class ThemeController extends GetxController {
 
       final baseTheme = ThemeData(
           useMaterial3: false,
-          primaryColor: primarySwatch![500],
+          primaryColor: primarySwatch![700],
           colorScheme: ColorScheme.fromSwatch(
-              accentColor: primarySwatch[200],
+              accentColor: primarySwatch[400],
               brightness: Brightness.dark,
-              backgroundColor: primarySwatch[700],
+              backgroundColor: primarySwatch[800],
               primarySwatch: primarySwatch),
-          //accentColor: primarySwatch[200],
-          dialogBackgroundColor: primarySwatch[700],
+          dialogBackgroundColor: primarySwatch[800],
           cardColor: primarySwatch[600],
-          primaryColorLight: primarySwatch[400],
-          primaryColorDark: primarySwatch[700],
-          //secondaryHeaderColor: primarySwatch[50],
-          canvasColor: primarySwatch[700],
-          //scaffoldBackgroundColor: primarySwatch[700],
+          primaryColorLight: primarySwatch[500],
+          primaryColorDark: primarySwatch[800],
+          canvasColor: primarySwatch[800],
           bottomSheetTheme: BottomSheetThemeData(
-              backgroundColor: primarySwatch[600],
-              modalBarrierColor: primarySwatch[400]),
+              backgroundColor: primarySwatch[700],
+              modalBarrierColor: primarySwatch[600]),
           textTheme: TextTheme(
             titleLarge: const TextStyle(
                 fontSize: 23, fontWeight: FontWeight.bold, color: Colors.white),
@@ -145,7 +160,7 @@ class ThemeController extends GetxController {
                   : Colors.white70,
               color: textColor),
           navigationRailTheme: NavigationRailThemeData(
-              backgroundColor: primarySwatch[700],
+              backgroundColor: primarySwatch[800],
               selectedIconTheme: const IconThemeData(color: Colors.white),
               unselectedIconTheme: IconThemeData(color: primarySwatch[100]),
               selectedLabelTextStyle: const TextStyle(
@@ -221,11 +236,8 @@ class ThemeController extends GetxController {
           bottomSheetTheme: const BottomSheetThemeData(
               backgroundColor: Colors.black, modalBarrierColor: Colors.black),
           sliderTheme: const SliderThemeData(
-            //base bar color
             inactiveTrackColor: Colors.white30,
-            //buffered progress
             activeTrackColor: Colors.white,
-            //progress bar color
             valueIndicatorColor: Colors.black38,
             thumbColor: Colors.white,
           ),
@@ -292,11 +304,8 @@ class ThemeController extends GetxController {
           bottomSheetTheme: const BottomSheetThemeData(
               backgroundColor: Colors.white, modalBarrierColor: Colors.white),
           sliderTheme: SliderThemeData(
-            //base bar color
             inactiveTrackColor: Colors.black38,
-            //buffered progress
             activeTrackColor: Colors.grey[800],
-            //progress bar color
             valueIndicatorColor: Colors.white38,
             thumbColor: Colors.grey[800],
           ),
@@ -317,7 +326,7 @@ class ThemeController extends GetxController {
   MaterialColor _createMaterialColor(Color color) {
     List strengths = <double>[.05];
     Map<int, Color> swatch = {};
-    final int r = (color.r * 255).round(), g = (color.g * 255).round(), b = (color.b * 255).round();
+    final int r = color.red, g = color.green, b = color.blue;
 
     for (int i = 1; i < 10; i++) {
       strengths.add(0.1 * i);
@@ -331,7 +340,15 @@ class ThemeController extends GetxController {
         1,
       );
     }
-    return MaterialColor(color.toARGB32(), swatch);
+    return MaterialColor(color.value, swatch);
+  }
+
+  Color _materialYouDynamicColor(Color color) {
+    final hsl = HSLColor.fromColor(color);
+    return hsl
+        .withSaturation(hsl.saturation.clamp(0.40, 0.68))
+        .withLightness(0.16)
+        .toColor();
   }
 
   Future<void> setWindowsTitleBarColor(Color color) async {
@@ -340,9 +357,9 @@ class ThemeController extends GetxController {
       Future.delayed(
           const Duration(milliseconds: 350),
           () async => await platform.invokeMethod('setTitleBarColor', {
-                'r': (color.r * 255).round(),
-                'g': (color.g * 255).round(),
-                'b': (color.b * 255).round(),
+                'r': color.red,
+                'g': color.green,
+                'b': color.blue,
               }));
     } on PlatformException catch (e) {
       printERROR("Failed to set title bar color: ${e.message}");
@@ -364,15 +381,15 @@ extension ColorWithHSL on Color {
   HSLColor get hsl => HSLColor.fromColor(this);
 
   Color withSaturation(double saturation) {
-    return hsl.withSaturation(clampDouble(saturation, 0.0, 1.0)).toColor();
+    return hsl.withSaturation(saturation).toColor();
   }
 
   Color withLightness(double lightness) {
-    return hsl.withLightness(clampDouble(lightness, 0.0, 1.0)).toColor();
+    return hsl.withLightness(lightness).toColor();
   }
 
   Color withHue(double hue) {
-    return hsl.withHue(clampDouble(hue, 0.0, 360.0)).toColor();
+    return hsl.withHue(hue).toColor();
   }
 }
 
